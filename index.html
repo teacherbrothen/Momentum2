@@ -14,7 +14,6 @@
             box-sizing: border-box;
         }
 
-        /* Responsive Brightspace Wrapper */
         .quiz-wrapper {
             width: 100%;
             max-width: 900px;
@@ -79,7 +78,6 @@
             overflow: visible;
         }
 
-        /* White text halo prevents vector lines from obscuring labels */
         .diagram text {
             paint-order: stroke fill;
             stroke: #ffffff;
@@ -245,17 +243,13 @@
                 <line id="vec1-line" stroke="#2980b9" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
                 <text id="vec1-m-text" font-size="12" font-weight="bold" fill="#2980b9"></text>
                 <text id="vec1-v-text" font-size="12" font-weight="bold" fill="#2980b9"></text>
-                <circle id="badge1-bg" r="9" fill="#2980b9"/>
-                <text id="badge1-txt" font-size="10" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">1</text>
 
                 <!-- Vector 2 (Vertical/Red) -->
                 <line id="vec2-line" stroke="#c0392b" stroke-width="2.5" marker-end="url(#arrow-red)"/>
                 <text id="vec2-m-text" font-size="12" font-weight="bold" fill="#c0392b"></text>
                 <text id="vec2-v-text" font-size="12" font-weight="bold" fill="#c0392b"></text>
-                <circle id="badge2-bg" r="9" fill="#c0392b"/>
-                <text id="badge2-txt" font-size="10" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">2</text>
 
-                <!-- Resultant Vector -->
+                <!-- Resultant Vector (Black) -->
                 <line id="vec-res-line" stroke="#2c3e50" stroke-width="2.5" marker-end="url(#arrow-black)"/>
                 <text id="vec-res-m-text" font-size="12" font-weight="bold" fill="#2c3e50"></text>
                 <text id="vec-res-v-text" font-size="12" font-weight="bold" fill="#2c3e50"></text>
@@ -271,7 +265,6 @@
         </div>
 
         <div class="inputs-container">
-            <!-- Input 1 -->
             <div class="input-group">
                 <label id="label-q1" for="input-q1">Question 1</label>
                 <div class="input-wrapper">
@@ -281,7 +274,6 @@
                 </div>
             </div>
 
-            <!-- Input 2 -->
             <div class="input-group">
                 <label id="label-q2" for="input-q2">Question 2</label>
                 <div class="input-wrapper">
@@ -291,7 +283,6 @@
                 </div>
             </div>
 
-            <!-- Input 3 -->
             <div class="input-group">
                 <label id="label-q3" for="input-q3">Question 3</label>
                 <div class="input-wrapper">
@@ -436,7 +427,7 @@
 
             l3.innerText = `Initial Velocity v₁:`;
             i3.placeholder = `e.g. 4.1 m/s [${state.dir1}]`;
-            b3.innerText = "·"; b3.onclick = () => insertSymbol('input-q3', '·');
+            b3.innerText = "·"; b3.onclick = () => insertSymbol('input-q1', '·');
 
         } else if (state.scenario === 3) {
             grid.innerHTML = `
@@ -465,44 +456,34 @@
     function renderGraphic() {
         const cx = 250;
         const cy = 140;
-        const radius = 22;
+        const radius = 18;
 
         const signX = (state.dir1 === 'E') ? 1 : -1;
         const signY = (state.dir2 === 'N') ? 1 : -1;
 
         const maxVal = Math.max(state.p1, state.p2, state.pf);
-        const maxPx = 100;
-        const minPx = 60;
+        const maxPx = 95;
+        const minPx = 55;
 
         let px1 = Math.max((state.p1 / maxVal) * maxPx, minPx);
         let px2 = Math.max((state.p2 / maxVal) * maxPx, minPx);
         let pxRes = Math.max((state.pf / maxVal) * maxPx, minPx * 1.1);
 
-        // Vector 1 (Horizontal)
+        // Vector 1 (Horizontal / Blue)
         const v1_targetX = cx - (signX * radius);
         const v1_startX = v1_targetX - (signX * px1);
         const line1 = document.getElementById("vec1-line");
         line1.setAttribute("x1", v1_startX); line1.setAttribute("y1", cy);
         line1.setAttribute("x2", v1_targetX); line1.setAttribute("y2", cy);
 
-        const badge1Bg = document.getElementById("badge1-bg");
-        const badge1Txt = document.getElementById("badge1-txt");
-        badge1Bg.setAttribute("cx", v1_startX); badge1Bg.setAttribute("cy", cy);
-        badge1Txt.setAttribute("x", v1_startX); badge1Txt.setAttribute("y", cy);
-
-        // Vector 2 (Vertical)
+        // Vector 2 (Vertical / Red)
         const v2_targetY = cy + (signY * radius);
         const v2_startY = v2_targetY + (signY * px2);
         const line2 = document.getElementById("vec2-line");
         line2.setAttribute("x1", cx); line2.setAttribute("y1", v2_startY);
         line2.setAttribute("x2", cx); line2.setAttribute("y2", v2_targetY);
 
-        const badge2Bg = document.getElementById("badge2-bg");
-        const badge2Txt = document.getElementById("badge2-txt");
-        badge2Bg.setAttribute("cx", cx); badge2Bg.setAttribute("cy", v2_startY);
-        badge2Txt.setAttribute("x", cx); badge2Txt.setAttribute("y", v2_startY);
-
-        // Resultant Vector
+        // Resultant Vector (Black)
         const radAngle = state.anglePrimary * (Math.PI / 180);
         const resX1 = cx + (signX * radius * Math.cos(radAngle));
         const resY1 = cy - (signY * radius * Math.sin(radAngle));
@@ -521,25 +502,27 @@
         const txtRes_m = document.getElementById("vec-res-m-text");
         const txtRes_v = document.getElementById("vec-res-v-text");
 
-        // Fixed anti-overlap logic: position text away from vector directions
+        // Blue Text: Place along Blue shaft in sector facing Resultant (towards Red vector)
         const innerX1 = (v1_startX + v1_targetX) / 2;
-        const innerY1 = cy + (signY > 0 ? 25 : -20);
-        txt1_m.setAttribute("x", innerX1); txt1_m.setAttribute("y", innerY1);
+        const innerY1_m = cy - (signY * 26);
+        const innerY1_v = cy - (signY * 12);
+        txt1_m.setAttribute("x", innerX1); txt1_m.setAttribute("y", innerY1_m);
         txt1_m.setAttribute("text-anchor", "middle");
-        txt1_v.setAttribute("x", innerX1); txt1_v.setAttribute("y", innerY1 + (signY > 0 ? 15 : -15));
+        txt1_v.setAttribute("x", innerX1); txt1_v.setAttribute("y", innerY1_v);
         txt1_v.setAttribute("text-anchor", "middle");
 
-        const innerX2 = cx + (signX > 0 ? -22 : 22);
+        // Red Text: Place along Red shaft in sector facing Resultant (towards Blue vector)
+        const innerX2 = cx + (signX * 18);
         const innerY2 = (v2_startY + v2_targetY) / 2;
-        const anchor2 = (signX > 0) ? "end" : "start";
-        txt2_m.setAttribute("x", innerX2); txt2_m.setAttribute("y", innerY2 - 6);
+        const anchor2 = (signX > 0) ? "start" : "end";
+        txt2_m.setAttribute("x", innerX2); txt2_m.setAttribute("y", innerY2 - 7);
         txt2_m.setAttribute("text-anchor", anchor2);
-        txt2_v.setAttribute("x", innerX2); txt2_v.setAttribute("y", innerY2 + 12);
+        txt2_v.setAttribute("x", innerX2); txt2_v.setAttribute("y", innerY2 + 9);
         txt2_v.setAttribute("text-anchor", anchor2);
 
-        // Position resultant text dynamic to quadrant
-        const resXMid = resX2 + (signX * 10);
-        const resYMid = resY2 + (-signY * 10);
+        // Resultant Text: Place past tip of Black vector
+        const resXMid = resX2 + (signX * 12);
+        const resYMid = resY2 - (signY * 12);
         const resAnchor = (signX > 0) ? "start" : "end";
 
         txtRes_m.setAttribute("x", resXMid);
@@ -547,7 +530,7 @@
         txtRes_m.setAttribute("text-anchor", resAnchor);
 
         txtRes_v.setAttribute("x", resXMid);
-        txtRes_v.setAttribute("y", resYMid + 12);
+        txtRes_v.setAttribute("y", resYMid + 10);
         txtRes_v.setAttribute("text-anchor", resAnchor);
 
         // Content assignment
