@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Momentum & Velocity Collision Simulator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+        .quiz-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 750px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.4em;
+        }
+        .score-row {
+            display: flex;
+            justify-content: space-around;
+            font-weight: bold;
+            font-size: 1em;
+            margin-bottom: 16px;
+        }
+        .correct { color: #2ecc71; }
+        .incorrect { color: #e74c3c; }
+        .graphic-container {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 12px;
+            position: relative;
+            background-color: #ffffff;
+            margin-bottom: 16px;
+        }
+        .id-badge {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 11px;
+            color: #aaa;
+            font-family: monospace;
+        }
+        .diagram {
+            width: 100%;
+            height: auto;
+            max-height: 320px;
+            display: block;
+        }
+        /* SVG text halo to prevent line collision overlap */
+        .diagram text {
+            paint-order: stroke fill;
+            stroke: #ffffff;
+            stroke-width: 3px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .parameters-box {
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            padding: 12px 18px;
+            margin-bottom: 16px;
+        }
+        .param-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .param-line {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .p-left { color: #2980b9; }
+        .p-right { color: #c0392b; text-align: right; }
+        .p-center { text-align: center; color: #2c3e50; width: 100%; }
+        .instruction-banner {
+            background-color: #ffe6dc;
+            color: #e65c00;
+            text-align: center;
+            padding: 8px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .inputs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .input-group label {
+            flex: 1 1 40%;
+            min-width: 180px;
+            font-size: 0.95em;
+            color: #2c3e50;
+        }
+        .input-wrapper {
+            flex: 1 1 50%;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.9em;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .dot-btn {
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 34px;
+            height: 32px;
+            font-size: 1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .dot-btn:hover { background-color: #616a6b; }
+        .feedback-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            background-color: transparent;
+            flex-shrink: 0;
+        }
+        .dot-correct { background-color: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+        .dot-incorrect { background-color: #e74c3c; box-shadow: 0 0 6px #e74c3c; }
+        .dot-syntax { background-color: #e67e22; box-shadow: 0 0 8px #e67e22; }
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit { background-color: #3498db; color: white; }
+        .btn-submit:hover { background-color: #2980b9; }
+        .btn-reset { background-color: #e67e22; color: white; }
+        .btn-reset:hover { background-color: #d35400; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card">
+    <h2>Perpendicular Collision Mechanics</h2>
+    
+    <div class="score-row">
+        <span class="correct">Correct: <span id="correct-count">0</span></span>
+        <span class="incorrect">Incorrect: <span id="incorrect-count">0</span></span>
+    </div>
+
+    <div class="graphic-container">
+        <span class="id-badge">ID: <span id="sim-id">---------</span></span>
+        <svg class="diagram" id="svg-canvas" viewBox="0 0 500 280">
+            <defs>
+                <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2980b9"/>
+                </marker>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#c0392b"/>
+                </marker>
+                <marker id="arrow-black" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2c3e50"/>
+                </marker>
+            </defs>
+
+            <!-- Vector 1 (Horizontal/Blue) -->
+            <line id="vec1-line" stroke="#2980b9" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+            <text id="vec1-m-text" font-size="12" font-weight="bold" fill="#2980b9"></text>
+            <text id="vec1-v-text" font-size="12" font-weight="bold" fill="#2980b9"></text>
+            <circle id="badge1-bg" r="9" fill="#2980b9"/>
+            <text id="badge1-txt" font-size="10" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">1</text>
+
+            <!-- Vector 2 (Vertical/Red) -->
+            <line id="vec2-line" stroke="#c0392b" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+            <text id="vec2-m-text" font-size="12" font-weight="bold" fill="#c0392b"></text>
+            <text id="vec2-v-text" font-size="12" font-weight="bold" fill="#c0392b"></text>
+            <circle id="badge2-bg" r="9" fill="#c0392b"/>
+            <text id="badge2-txt" font-size="10" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">2</text>
+
+            <!-- Resultant Vector -->
+            <line id="vec-res-line" stroke="#2c3e50" stroke-width="2.5" marker-end="url(#arrow-black)"/>
+            <text id="vec-res-m-text" font-size="12" font-weight="bold" fill="#2c3e50"></text>
+            <text id="vec-res-v-text" font-size="12" font-weight="bold" fill="#2c3e50"></text>
+        </svg>
+    </div>
+
+    <div class="parameters-box">
+        <div class="param-grid" id="parameters-grid"></div>
+    </div>
+
+    <div class="instruction-banner">
+        Round all answers to 1 decimal place.
+    </div>
+
+    <div class="inputs-container">
+        <!-- Input 1 -->
+        <div class="input-group">
+            <label id="label-q1" for="input-q1">Question 1</label>
+            <div class="input-wrapper">
+                <input type="text" id="input-q1" placeholder="">
+                <button class="dot-btn" id="btn-q1" onclick="insertSymbol('input-q1', '·')">•</button>
+                <span class="feedback-dot" id="dot-q1"></span>
+            </div>
+        </div>
+
+        <!-- Input 2 -->
+        <div class="input-group">
+            <label id="label-q2" for="input-q2">Question 2</label>
+            <div class="input-wrapper">
+                <input type="text" id="input-q2" placeholder="">
+                <button class="dot-btn" id="btn-q2" onclick="insertSymbol('input-q2', '°')">°</button>
+                <span class="feedback-dot" id="dot-q2"></span>
+            </div>
+        </div>
+
+        <!-- Input 3 -->
+        <div class="input-group">
+            <label id="label-q3" for="input-q3">Question 3</label>
+            <div class="input-wrapper">
+                <input type="text" id="input-q3" placeholder="">
+                <button class="dot-btn" id="btn-q3" onclick="insertSymbol('input-q3', '°')">°</button>
+                <span class="feedback-dot" id="dot-q3"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="button-row">
+        <button class="btn btn-submit" onclick="checkAnswers()">Submit Answer</button>
+        <button class="btn btn-reset" onclick="generateNewProblem()">Restart Quiz</button>
+    </div>
+</div>
+
+<script>
+    let correctTotal = 0;
+    let incorrectTotal = 0;
+
+    let state = {
+        scenario: 1,
+        m1: 0, v1: 0, dir1: "E", p1: 0,
+        m2: 0, v2: 0, dir2: "N", p2: 0,
+        mTot: 0, pf: 0, vf: 0,
+        anglePrimary: 0,
+        cardinalPrimary: "",
+        cardinalSecondary: ""
+    };
+
+    function generateId() {
+        const now = new Date();
+        const y = String(now.getFullYear()).slice(-1);
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const rnd = String(Math.floor(1000 + Math.random() * 9000));
+        return `${y}${m}${d}${rnd}`;
+    }
+
+    function insertSymbol(inputId, symbol) {
+        const input = document.getElementById(inputId);
+        input.value += symbol;
+        input.focus();
+    }
+
+    function generateNewProblem() {
+        const submitBtn = document.querySelector(".btn-submit");
+        submitBtn.innerText = "Submit Answer";
+        submitBtn.style.backgroundColor = "#3498db";
+
+        ["input-q1", "input-q2", "input-q3"].forEach(id => {
+            const el = document.getElementById(id);
+            el.disabled = false;
+            el.value = "";
+            el.onclick = null;
+        });
+
+        document.getElementById("dot-q1").className = "feedback-dot";
+        document.getElementById("dot-q2").className = "feedback-dot";
+        document.getElementById("dot-q3").className = "feedback-dot";
+
+        document.getElementById("sim-id").innerText = generateId();
+
+        state.scenario = Math.floor(Math.random() * 3) + 1;
+
+        state.m1 = parseFloat((Math.random() * 3.5 + 1.5).toFixed(1));
+        state.v1 = parseFloat((Math.random() * 5.0 + 2.0).toFixed(1));
+        state.p1 = parseFloat((state.m1 * state.v1).toFixed(2));
+
+        state.m2 = parseFloat((Math.random() * 3.5 + 1.5).toFixed(1));
+        state.v2 = parseFloat((Math.random() * 5.0 + 2.0).toFixed(1));
+        state.p2 = parseFloat((state.m2 * state.v2).toFixed(2));
+
+        state.dir1 = ["E", "W"][Math.floor(Math.random() * 2)];
+        state.dir2 = ["N", "S"][Math.floor(Math.random() * 2)];
+
+        state.mTot = parseFloat((state.m1 + state.m2).toFixed(1));
+        state.pf = Math.hypot(state.p1, state.p2);
+        state.vf = state.pf / state.mTot;
+
+        state.anglePrimary = Math.atan2(state.p2, state.p1) * (180 / Math.PI);
+        state.cardinalPrimary = `${state.dir2} of ${state.dir1}`;
+        state.cardinalSecondary = `${state.dir1} of ${state.dir2}`;
+
+        setupScenarioUI();
+        renderGraphic();
+    }
+
+    function setupScenarioUI() {
+        const grid = document.getElementById("parameters-grid");
+        const l1 = document.getElementById("label-q1");
+        const l2 = document.getElementById("label-q2");
+        const l3 = document.getElementById("label-q3");
+        const b1 = document.getElementById("btn-q1");
+        const b2 = document.getElementById("btn-q2");
+        const b3 = document.getElementById("btn-q3");
+        const i1 = document.getElementById("input-q1");
+        const i2 = document.getElementById("input-q2");
+        const i3 = document.getElementById("input-q3");
+
+        if (state.scenario === 1) {
+            grid.innerHTML = `
+                <div class="param-line">
+                    <span class="p-left">m₁ = ${state.m1.toFixed(1)} kg</span>
+                    <span class="p-right">m₂ = ${state.m2.toFixed(1)} kg</span>
+                </div>
+                <div class="param-line">
+                    <span class="p-left">v₁ = ${state.v1.toFixed(1)} m/s</span>
+                    <span class="p-right">v₂ = ${state.v2.toFixed(1)} m/s</span>
+                </div>
+            `;
+            l1.innerText = "Final Momentum Magnitude:";
+            i1.placeholder = "e.g. 24.5 kg·m/s";
+            b1.innerText = "·"; b1.onclick = () => insertSymbol('input-q1', '·');
+
+            l2.innerText = "Final Direction:";
+            i2.placeholder = `e.g. [20.4° ${state.cardinalPrimary}]`;
+            b2.innerText = "°"; b2.onclick = () => insertSymbol('input-q2', '°');
+
+            l3.innerText = "Final Velocity Magnitude:";
+            i3.placeholder = "e.g. 3.8 m/s";
+            b3.innerText = "·"; b3.onclick = () => insertSymbol('input-q3', '·');
+
+        } else if (state.scenario === 2) {
+            grid.innerHTML = `
+                <div class="param-line">
+                    <span class="p-left">m₁ = ${state.m1.toFixed(1)} kg</span>
+                    <span class="p-right">m₂ = ${state.m2.toFixed(1)} kg</span>
+                </div>
+                <div class="param-line">
+                    <span class="p-center">v<sub>final</sub> = ${state.vf.toFixed(1)} m/s [${state.anglePrimary.toFixed(1)}° ${state.cardinalPrimary}]</span>
+                </div>
+            `;
+            l1.innerText = `Initial Momentum p₁:`;
+            i1.placeholder = `e.g. 12.8 kg·m/s [${state.dir1}]`;
+            b1.innerText = "·"; b1.onclick = () => insertSymbol('input-q1', '·');
+
+            l2.innerText = `Initial Momentum p₂:`;
+            i2.placeholder = `e.g. 15.2 kg·m/s [${state.dir2}]`;
+            b2.innerText = "·"; b2.onclick = () => insertSymbol('input-q2', '·');
+
+            l3.innerText = `Initial Velocity v₁:`;
+            i3.placeholder = `e.g. 4.1 m/s [${state.dir1}]`;
+            b3.innerText = "·"; b3.onclick = () => insertSymbol('input-q3', '·');
+
+        } else if (state.scenario === 3) {
+            grid.innerHTML = `
+                <div class="param-line">
+                    <span class="p-left">m₁ = ${state.m1.toFixed(1)} kg, v₁ = ${state.v1.toFixed(1)} m/s</span>
+                    <span class="p-right">m₂ = ${state.m2.toFixed(1)} kg</span>
+                </div>
+                <div class="param-line">
+                    <span class="p-center">v<sub>final</sub> = ${state.vf.toFixed(1)} m/s</span>
+                </div>
+            `;
+            l1.innerText = "Final Direction:";
+            i1.placeholder = `e.g. [20.4° ${state.cardinalPrimary}]`;
+            b1.innerText = "°"; b1.onclick = () => insertSymbol('input-q1', '°');
+
+            l2.innerText = `Initial Momentum p₂:`;
+            i2.placeholder = `e.g. 15.2 kg·m/s [${state.dir2}]`;
+            b2.innerText = "·"; b2.onclick = () => insertSymbol('input-q2', '·');
+
+            l3.innerText = `Initial Velocity v₂:`;
+            i3.placeholder = `e.g. 4.3 m/s [${state.dir2}]`;
+            b3.innerText = "·"; b3.onclick = () => insertSymbol('input-q3', '·');
+        }
+    }
+
+    function renderGraphic() {
+        const cx = 250;
+        const cy = 140;
+        const radius = 22;
+
+        const signX = (state.dir1 === 'E') ? 1 : -1;
+        const signY = (state.dir2 === 'N') ? 1 : -1;
+
+        const maxVal = Math.max(state.p1, state.p2, state.pf);
+        const maxPx = 110;
+        const minPx = 65;
+
+        let px1 = Math.max((state.p1 / maxVal) * maxPx, minPx);
+        let px2 = Math.max((state.p2 / maxVal) * maxPx, minPx);
+        let pxRes = Math.max((state.pf / maxVal) * maxPx, minPx * 1.2);
+
+        // Vector 1 (Horizontal/Blue)
+        const v1_targetX = cx - (signX * radius);
+        const v1_startX = v1_targetX - (signX * px1);
+        const line1 = document.getElementById("vec1-line");
+        line1.setAttribute("x1", v1_startX); line1.setAttribute("y1", cy);
+        line1.setAttribute("x2", v1_targetX); line1.setAttribute("y2", cy);
+
+        const badge1Bg = document.getElementById("badge1-bg");
+        const badge1Txt = document.getElementById("badge1-txt");
+        badge1Bg.setAttribute("cx", v1_startX); badge1Bg.setAttribute("cy", cy);
+        badge1Txt.setAttribute("x", v1_startX); badge1Txt.setAttribute("y", cy);
+
+        // Vector 2 (Vertical/Red)
+        const v2_targetY = cy + (signY * radius);
+        const v2_startY = v2_targetY + (signY * px2);
+        const line2 = document.getElementById("vec2-line");
+        line2.setAttribute("x1", cx); line2.setAttribute("y1", v2_startY);
+        line2.setAttribute("x2", cx); line2.setAttribute("y2", v2_targetY);
+
+        const badge2Bg = document.getElementById("badge2-bg");
+        const badge2Txt = document.getElementById("badge2-txt");
+        badge2Bg.setAttribute("cx", cx); badge2Bg.setAttribute("cy", v2_startY);
+        badge2Txt.setAttribute("x", cx); badge2Txt.setAttribute("y", v2_startY);
+
+        // Resultant Vector
+        const radAngle = state.anglePrimary * (Math.PI / 180);
+        const resX1 = cx + (signX * radius * Math.cos(radAngle));
+        const resY1 = cy - (signY * radius * Math.sin(radAngle));
+        const resX2 = cx + (signX * (radius + pxRes) * Math.cos(radAngle));
+        const resY2 = cy - (signY * (radius + pxRes) * Math.sin(radAngle));
+
+        const lineRes = document.getElementById("vec-res-line");
+        lineRes.setAttribute("x1", resX1); lineRes.setAttribute("y1", resY1);
+        lineRes.setAttribute("x2", resX2); lineRes.setAttribute("y2", resY2);
+
+        const txt1_m = document.getElementById("vec1-m-text");
+        const txt1_v = document.getElementById("vec1-v-text");
+        const txt2_m = document.getElementById("vec2-m-text");
+        const txt2_v = document.getElementById("vec2-v-text");
+        const txtRes_m = document.getElementById("vec-res-m-text");
+        const txtRes_v = document.getElementById("vec-res-v-text");
+
+        // Dynamic Position Offsets to prevent overlap
+        const innerX1 = (v1_startX + v1_targetX) / 2;
+        const innerY1 = cy + (signY > 0 ? 20 : -20);
+        txt1_m.setAttribute("x", innerX1); txt1_m.setAttribute("y", innerY1);
+        txt1_m.setAttribute("text-anchor", "middle");
+        txt1_v.setAttribute("x", innerX1); txt1_v.setAttribute("y", innerY1 + (signY > 0 ? 15 : -15));
+        txt1_v.setAttribute("text-anchor", "middle");
+
+        const innerX2 = cx + (signX > 0 ? -18 : 18);
+        const innerY2 = (v2_startY + v2_targetY) / 2;
+        const anchor2 = (signX > 0) ? "end" : "start";
+        txt2_m.setAttribute("x", innerX2); txt2_m.setAttribute("y", innerY2 - 6);
+        txt2_m.setAttribute("text-anchor", anchor2);
+        txt2_v.setAttribute("x", innerX2); txt2_v.setAttribute("y", innerY2 + 12);
+        txt2_v.setAttribute("text-anchor", anchor2);
+
+        // Resultant Text Positioning (Clear of the arrow shaft)
+        const resXMid = (resX1 + resX2) / 2;
+        const resYMid = (resY1 + resY2) / 2;
+        
+        const resOffsetX = signX * 25;
+        const resOffsetY = -signY * 25;
+        const resAnchor = (signX > 0) ? "start" : "end";
+
+        txtRes_m.setAttribute("x", resXMid + resOffsetX);
+        txtRes_m.setAttribute("y", resYMid + resOffsetY - 6);
+        txtRes_m.setAttribute("text-anchor", resAnchor);
+
+        txtRes_v.setAttribute("x", resXMid + resOffsetX);
+        txtRes_v.setAttribute("y", resYMid + resOffsetY + 12);
+        txtRes_v.setAttribute("text-anchor", resAnchor);
+
+        // Set Text Contents
+        txt1_m.textContent = `m = ${state.m1.toFixed(1)} kg`;
+        txt1_v.textContent = (state.scenario === 2) ? `v = ?` : `v = ${state.v1.toFixed(1)} m/s`;
+
+        txt2_m.textContent = `m = ${state.m2.toFixed(1)} kg`;
+        txt2_v.textContent = (state.scenario === 3) ? `v = ?` : `v = ${state.v2.toFixed(1)} m/s`;
+
+        txtRes_m.textContent = `m = ${state.mTot.toFixed(1)} kg`;
+        txtRes_v.textContent = (state.scenario === 1) ? `v = ?` : `v = ${state.vf.toFixed(1)} m/s`;
+    }
+
+    function checkAnswers() {
+        const submitBtn = document.querySelector(".btn-submit");
+
+        if (submitBtn.innerText === "Next Problem") {
+            generateNewProblem();
+            return;
+        }
+
+        const raw1 = document.getElementById("input-q1").value.trim();
+        const raw2 = document.getElementById("input-q2").value.trim();
+        const raw3 = document.getElementById("input-q3").value.trim();
+
+        let res1 = { math: false, syntax: false }, expected1Str = "";
+        let res2 = { math: false, syntax: false }, expected2Str = "";
+        let res3 = { math: false, syntax: false }, expected3Str = "";
+
+        if (state.scenario === 1) {
+            res1 = checkNumericInput(raw1, state.pf, "kg·m/s");
+            expected1Str = `${state.pf.toFixed(1)} kg·m/s`;
+
+            res2 = checkDirectionInput(raw2);
+            expected2Str = `[${state.anglePrimary.toFixed(1)}° ${state.cardinalPrimary}]`;
+
+            res3 = checkNumericInput(raw3, state.vf, "m/s");
+            expected3Str = `${state.vf.toFixed(1)} m/s`;
+
+        } else if (state.scenario === 2) {
+            res1 = checkVectorInput(raw1, state.p1, "kg·m/s", state.dir1);
+            expected1Str = `${state.p1.toFixed(1)} kg·m/s [${state.dir1}]`;
+
+            res2 = checkVectorInput(raw2, state.p2, "kg·m/s", state.dir2);
+            expected2Str = `${state.p2.toFixed(1)} kg·m/s [${state.dir2}]`;
+
+            res3 = checkVectorInput(raw3, state.v1, "m/s", state.dir1);
+            expected3Str = `${state.v1.toFixed(1)} m/s [${state.dir1}]`;
+
+        } else if (state.scenario === 3) {
+            res1 = checkDirectionInput(raw1);
+            expected1Str = `[${state.anglePrimary.toFixed(1)}° ${state.cardinalPrimary}]`;
+
+            res2 = checkVectorInput(raw2, state.p2, "kg·m/s", state.dir2);
+            expected2Str = `${state.p2.toFixed(1)} kg·m/s [${state.dir2}]`;
+
+            res3 = checkVectorInput(raw3, state.v2, "m/s", state.dir2);
+            expected3Str = `${state.v2.toFixed(1)} m/s [${state.dir2}]`;
+        }
+
+        applyFeedback("q1", res1, expected1Str);
+        applyFeedback("q2", res2, expected2Str);
+        applyFeedback("q3", res3, expected3Str);
+
+        const allMathCorrect = res1.math && res2.math && res3.math;
+        const allSyntaxCorrect = res1.syntax && res2.syntax && res3.syntax;
+
+        if (!allMathCorrect) {
+            incorrectTotal++;
+            document.getElementById("incorrect-count").innerText = incorrectTotal;
+            submitBtn.innerText = "Next Problem";
+            submitBtn.style.backgroundColor = "#2ecc71";
+        } else if (allMathCorrect && allSyntaxCorrect) {
+            correctTotal++;
+            document.getElementById("correct-count").innerText = correctTotal;
+            submitBtn.innerText = "Next Problem";
+            submitBtn.style.backgroundColor = "#2ecc71";
+        }
+    }
+
+    function checkNumericInput(raw, expectedVal, expectedUnit) {
+        const match = raw.replace(/[\[\]]/g, '').trim().match(/^([\d\.]+)\s*(.*)$/);
+        if (!match) return { math: false, syntax: false };
+
+        const val = parseFloat(match[1]);
+        const unit = match[2].trim();
+
+        if (isNaN(val)) return { math: false, syntax: false };
+
+        const mathOk = Math.abs(val - expectedVal) <= 0.2 || (Math.abs(val - expectedVal) / expectedVal) <= 0.05;
+        const unitOk = (unit.toLowerCase() === expectedUnit.toLowerCase());
+
+        return { math: mathOk, syntax: unitOk };
+    }
+
+    function checkVectorInput(raw, expectedVal, expectedUnit, expectedDir) {
+        let cleanStr = raw.trim();
+        const dirMatch = cleanStr.match(/\[([nNsSeEwW])\]/i) || cleanStr.match(/\b([nNsSeEwW])\b/i);
+        const dir = dirMatch ? dirMatch[1].toUpperCase() : "";
+
+        cleanStr = cleanStr.replace(/\[.*?\]/g, '').trim();
+        const match = cleanStr.match(/^([\d\.]+)\s*(.*)$/);
+        if (!match) return { math: false, syntax: false };
+
+        const val = parseFloat(match[1]);
+        const unit = match[2].trim();
+
+        if (isNaN(val)) return { math: false, syntax: false };
+
+        const mathOk = (Math.abs(val - expectedVal) <= 0.2 || (Math.abs(val - expectedVal) / expectedVal) <= 0.05) && (dir === expectedDir);
+        const syntaxOk = (unit.toLowerCase() === expectedUnit.toLowerCase()) && (dir === expectedDir);
+
+        return { math: mathOk, syntax: syntaxOk };
+    }
+
+    function checkDirectionInput(raw) {
+        let cleanStr = raw.trim();
+        const hasBrackets = cleanStr.startsWith('[') && cleanStr.endsWith(']');
+        cleanStr = cleanStr.replace(/[\[\]]/g, '').trim();
+
+        const match = cleanStr.match(/^([\d\.]+)\s*(?:°|deg)?\s*([nNsSeEwW])\s*(?:of|\/|-)?\s*([nNsSeEwW])$/i);
+        if (!match) return { math: false, syntax: false };
+
+        const angle = parseFloat(match[1]);
+        const d1 = match[2].toUpperCase();
+        const d2 = match[3].toUpperCase();
+        const cardinal = `${d1} of ${d2}`;
+
+        if (isNaN(angle)) return { math: false, syntax: false };
+
+        let mathOk = false;
+        if (cardinal === state.cardinalPrimary && Math.abs(angle - state.anglePrimary) <= 0.4) {
+            mathOk = true;
+        } else if (cardinal === state.cardinalSecondary && Math.abs(angle - (90 - state.anglePrimary)) <= 0.4) {
+            mathOk = true;
+        }
+
+        const hasDegSymbol = raw.includes("°") || raw.toLowerCase().includes("deg");
+        return { math: mathOk, syntax: hasDegSymbol && hasBrackets };
+    }
+
+    function applyFeedback(qId, res, expectedStr) {
+        const dot = document.getElementById(`dot-${qId}`);
+        const input = document.getElementById(`input-${qId}`);
+
+        if (res.math) {
+            if (res.syntax) {
+                dot.className = "feedback-dot dot-correct";
+                input.disabled = true;
+            } else {
+                dot.className = "feedback-dot dot-syntax";
+            }
+        } else {
+            dot.className = "feedback-dot dot-incorrect";
+            input.disabled = true;
+            const val = input.value.split(" (")[0];
+            input.value = `${val} (Expected: ${expectedStr})`;
+        }
+    }
+
+    window.onload = generateNewProblem;
+</script>
+
+</body>
+</html>
